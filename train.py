@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 class Config:
     # Configuration for the training process
     base_model = "roberta-base"  # Base model to use
-    output_dir = "results_lora"  # Directory to save results
+    output_dir = "best_model"  # Directory to save results
     use_fnn = False  # Whether to use a custom feedforward neural network
     use_augmentation = False  # Whether to use data augmentation
     use_early_stopping = True  # Whether to use early stopping
