@@ -26,9 +26,9 @@ def load_model_and_tokenizer(model_dir: str):
     Load the tokenizer and model from the specified directory.
     """
     logger.info("Loading tokenizer and model from fine-tuned checkpoint")
-    tokenizer = RobertaTokenizer.from_pretrained(f".trained_models/{model_dir}/final_model")  # Load tokenizer
+    tokenizer = RobertaTokenizer.from_pretrained(f"trained_models/{model_dir}/final_model")  # Load tokenizer
     model = RobertaForSequenceClassification.from_pretrained(
-        f".trained_models/{model_dir}/final_model", num_labels=4  # Load model with 4 output labels
+        f"trained_models/{model_dir}/final_model", num_labels=4  # Load model with 4 output labels
     )
     model.to(DEVICE)  # Move model to the appropriate device (CPU/GPU)
     model.eval()  # Set model to evaluation mode

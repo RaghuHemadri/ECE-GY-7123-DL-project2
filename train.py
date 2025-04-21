@@ -8,7 +8,8 @@ from transformers import (
     DataCollatorWithPadding,
     RobertaModel,
     RobertaPreTrainedModel,
-    AutoConfig
+    AutoConfig,
+    RobertaConfig
 )
 from datasets import load_dataset, Dataset, ClassLabel
 import evaluate
@@ -35,7 +36,7 @@ class Config:
     output_dir = "best_model"  # Directory to save results
     use_fnn = False  # Whether to use a custom feedforward neural network
     use_augmentation = False  # Whether to use data augmentation
-    use_early_stopping = True  # Whether to use early stopping
+    use_early_stopping = False  # Whether to use early stopping
     use_weight_decay = False  # Whether to apply weight decay
     freeze_base_model = True  # Whether to freeze base model parameters
     use_mc_dropout_inference = False  # Whether to use MC Dropout during inference
@@ -137,13 +138,6 @@ def mc_dropout_predict(model, dataset, data_collator, device, iterations):
     mean_logits = np.mean(np.array(all_logits), axis=0)
     return np.argmax(mean_logits, axis=1)
 
-def freeze_model_parameters(model):
-    # Freeze parameters of the base model
-    logger.info("Freezing base model parameters")
-    for name, param in model.named_parameters():
-        if "lora" not in name and "classifier" not in name:
-            param.requires_grad = False
-
 # ---------------------------
 # Main Training Function
 # ---------------------------
@@ -177,7 +171,12 @@ def train_model(config):
         model_config = AutoConfig.from_pretrained(config.base_model, num_labels=num_labels)
         model = RobertaWithFNN.from_pretrained(config.base_model, config=model_config)
     else:
-        model = RobertaForSequenceClassification.from_pretrained(config.base_model, num_labels=num_labels, id2label=id2label, label2id=label2id)
+        model = RobertaForSequenceClassification.from_pretrained("roberta-base", config=RobertaConfig.from_pretrained(
+        "roberta-base",
+        num_labels=4,
+        id2label=id2label,
+        label2id=label2id,
+    ))
 
     # Log number of trainable parameters
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -196,7 +195,10 @@ def train_model(config):
 
     # Freeze base model parameters if required
     if config.freeze_base_model:
-        freeze_model_parameters(model)
+        logger.info("Freezing base model parameters")
+        for name, param in model.named_parameters():
+            if "lora" not in name and "classifier" not in name:
+                param.requires_grad = False
 
     # Log number of trainable parameters after freezing
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -210,7 +212,7 @@ def train_model(config):
         output_dir=f'./trained_models/{config.output_dir}',
         evaluation_strategy='steps',
         save_strategy='steps',
-        eval_steps=500,
+        eval_steps=100,
         save_steps=4000,
         learning_rate=config.learning_rate,
         per_device_train_batch_size=config.train_batch_size,
